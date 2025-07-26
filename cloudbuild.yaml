@@ -1,9 +1,13 @@
-# Add this section to the top of your cloudbuild.yaml file.
-options:
-  default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
-logs_bucket: 'gs://63621516867-us-central1-cloudbuild-logs'
+# A Cloud Build configuration file for building and deploying a Kubeflow pipeline.
+# This file performs the following steps:
+# 1. Fetches authentication credentials for a GKE cluster.
+# 2. Builds a Docker image containing the Kubeflow pipeline components.
+# 3. Compiles the Kubeflow pipeline Python script into a YAML file.
+# 4. Uploads the compiled pipeline YAML to the Kubeflow Pipelines UI.
 
-# The rest of your build steps follow.
+# This step is crucial for authenticating with your Kubeflow cluster.
+# The 'gcloud container clusters get-credentials' command fetches the credentials
+# and stores them in the default location for the Cloud Build environment: /builder/home/.kube/config
 steps:
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
   entrypoint: 'bash'
@@ -14,15 +18,25 @@ steps:
       --zone "${_ZONE}" \
       --project "${_PROJECT_ID}"
 
+# This step builds the Docker image from your Dockerfile.
+# The image is tagged and pushed to Google Container Registry (GCR)
+# with the name 'kubeflow-pipeline-components:latest'.
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest', '.']
 
+# This step runs your Python script to compile the Kubeflow pipeline.
+# The script will generate a YAML file, in this case 'healthcare_ml_pipeline.yaml'.
+# The 'KUBECONFIG' environment variable is explicitly set to point to the
+# credentials file, allowing the kfp SDK client to authenticate with the cluster.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'python3'
   args: ['pipeline.py']
   env:
   - 'KUBECONFIG=/builder/home/.kube/config'
 
+# This step uses the kfp CLI to upload the compiled pipeline to the Kubeflow Pipelines UI.
+# It uses the same Docker image from the previous step, which contains the 'kfp' CLI.
+# The 'KUBECONFIG' environment variable is again required for authentication with the cluster.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'kfp'
   args:
@@ -35,9 +49,12 @@ steps:
   env:
   - 'KUBECONFIG=/builder/home/.kube/config'
 
+# This section lists the Docker images to be pushed to Google Container Registry.
 images:
 - 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
 
+# This section defines the substitution variables used in the steps.
+# You can override these variables when you trigger the build.
 substitutions:
   _PROJECT_ID: advance-replica-466713-n7
   _CLUSTER_NAME: kubeflow-healthcare-cluster

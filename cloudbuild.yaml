@@ -18,11 +18,14 @@ steps:
   args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest', '.']
 
 # Step 3: Run the Python script to compile the Kubeflow pipeline.
+# The KUBECONFIG environment variable is passed to allow authentication.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'python3'
   args: ['pipeline.py']
+  env:
+  - 'KUBECONFIG=/builder/home/.kube/config'
 
-# NEW Step 4: Upload the compiled pipeline to the Kubeflow Pipelines UI.
+# Step 4: Upload the compiled pipeline to the Kubeflow Pipelines UI.
 # The KUBECONFIG environment variable is passed to allow authentication.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'kfp'
@@ -34,7 +37,7 @@ steps:
   - '--pipeline-name'
   - 'healthcare-data-ml-pipeline'
   env:
-  - 'KUBECONFIG=/builder/home/.kube/config' # <-- Add this line to pass credentials
+  - 'KUBECONFIG=/builder/home/.kube/config'
 
 images:
 - 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'

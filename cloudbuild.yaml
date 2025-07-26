@@ -1,32 +1,51 @@
+# This configuration file is for Google Cloud Build.
+# It builds a Docker image, runs a Python script to compile a pipeline,
+# and then applies it to a Kubeflow cluster.
+
+# This option resolves the "build.service_account" logs error for 2nd gen triggers
+options:
+  default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
+
 steps:
-- name: 'gcr.io/cloud-builders/gcloud'
+# Step 1: Get credentials for the GKE cluster
+# This step is crucial for subsequent kubectl commands.
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
-    gcloud config set project $_PROJECT_ID
-    gcloud container clusters get-credentials $_CLUSTER_NAME --zone $_ZONE --project $_PROJECT_ID
+    gcloud container clusters get-credentials "${_CLUSTER_NAME}" \
+      --zone "${_ZONE}" \
+      --project "${_PROJECT_ID}"
 
+# Step 2: Build and push the Docker image
+# This combines the build and push into a single step.
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest', '.']
 
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest']
-
+# Step 3: Run the Python script to compile the Kubeflow pipeline
+# This assumes 'pipeline.py' is in the root directory.
 - name: 'python'
   entrypoint: 'python3'
   args: ['pipeline.py']
 
+# Step 4: Apply the compiled pipeline to Kubeflow
+# This assumes the 'healthcare_ml_pipeline.yaml' file is created by the python script.
 - name: 'gcr.io/cloud-builders/kubectl'
   args:
   - 'apply'
   - '-f'
-  - 'healthcare_ml_pipeline.yaml' # This will upload the compiled pipeline to Kubeflow
+  - 'healthcare_ml_pipeline.yaml'
   env:
-  - 'KUBECONFIG=/builder/home/.kube/config' # Ensure kubectl uses the correct config
+  - 'KUBECONFIG=/builder/home/.kube/config'
 
-# Parameters for Cloud Build (can be set in triggers)
+# This section lists the images to be pushed to Container Registry
+images:
+- 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
+
+# This section defines the substitution variables.
+# You must set these in your Cloud Build trigger.
 substitutions:
-  _PROJECT_ID: your-kubeflow-healthcare-project # Replace with your project ID
+  _PROJECT_ID: your-kubeflow-healthcare-project # REPLACE WITH YOUR PROJECT ID
   _CLUSTER_NAME: kubeflow-healthcare-cluster
-  _ZONE: us-central1-a # Replace with your zone
+  _ZONE: us-central1-a # REPLACE WITH YOUR ZONE

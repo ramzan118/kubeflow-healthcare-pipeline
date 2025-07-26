@@ -1,10 +1,6 @@
-options:
-  default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
-logs_bucket: 'gs://63621516867-us-central1-cloudbuild-logs'
-
 steps:
-# Step 1: Get credentials for the GKE cluster.
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+# Step 0: Get credentials for the GKE cluster.
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
   entrypoint: 'bash'
   args:
   - '-c'
@@ -13,11 +9,11 @@ steps:
       --zone "${_ZONE}" \
       --project "${_PROJECT_ID}"
 
-# Step 2: Build the Docker image.
+# Step 1: Build the Docker image.
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest', '.']
 
-# Step 3: Run the Python script to compile the Kubeflow pipeline.
+# Step 2: Run the Python script to compile the Kubeflow pipeline.
 # The KUBECONFIG environment variable is passed to allow authentication.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'python3'
@@ -25,7 +21,7 @@ steps:
   env:
   - 'KUBECONFIG=/builder/home/.kube/config'
 
-# Step 4: Upload the compiled pipeline to the Kubeflow Pipelines UI.
+# Step 3: Upload the compiled pipeline to the Kubeflow Pipelines UI.
 # The KUBECONFIG environment variable is passed to allow authentication.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'kfp'
@@ -38,11 +34,3 @@ steps:
   - 'healthcare-data-ml-pipeline'
   env:
   - 'KUBECONFIG=/builder/home/.kube/config'
-
-images:
-- 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
-
-substitutions:
-  _PROJECT_ID: advance-replica-466713-n7
-  _CLUSTER_NAME: kubeflow-healthcare-cluster
-  _ZONE: us-central1-a

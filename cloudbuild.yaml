@@ -1,6 +1,14 @@
+# This configuration file is for Google Cloud Build.
+# It builds a Docker image, runs a Python script to compile a pipeline,
+# and then applies it to a Kubeflow cluster.
+
+options:
+  default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
+
 steps:
 # Step 1: Get credentials for the GKE cluster.
-# This step fetches the credentials and stores them in the build environment.
+# This step is crucial for authentication and correctly uses gcloud to fetch credentials
+# for your specific cluster, project, and zone.
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'bash'
   args:
@@ -11,31 +19,32 @@ steps:
       --project "${_PROJECT_ID}"
 
 # Step 2: Build the Docker image.
-# This builds your application's Docker image.
+# This step builds the image with the necessary code and dependencies.
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest', '.']
 
-# Step 3: Run the Python script to compile the Kubeflow pipeline.
-# This step uses the image you just built to execute your pipeline script.
+# Step 3: Compile the Kubeflow pipeline.
+# This step uses the image you just built and runs your pipeline.py script.
+# The script is expected to generate a file named 'healthcare_ml_pipeline.yaml'.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'python3'
   args: ['pipeline.py']
 
 # Step 4: Apply the compiled pipeline to Kubeflow.
-# This is the step that failed. We are now explicitly setting the required
-# environment variables and KUBECONFIG for the kubectl builder.
+# This step uses kubectl to deploy the pipeline manifest file.
+# The 'KUBECONFIG' environment variable correctly points to the credentials
+# fetched in the first step, resolving the previous authentication error.
 - name: 'gcr.io/cloud-builders/kubectl'
   args:
   - 'apply'
   - '-f'
   - 'healthcare_ml_pipeline.yaml'
   env:
-  - 'CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER_NAME}'
-  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
   - 'KUBECONFIG=/builder/home/.kube/config'
 
 images:
-# This tells Cloud Build to automatically push the built Docker image.
+# This section tells Cloud Build to automatically push the built Docker image
+# to your Container Registry.
 - 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
 
 substitutions:

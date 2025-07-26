@@ -1,3 +1,10 @@
+options:
+  # This option is still a good practice, but we'll now also
+  # explicitly define the logs bucket to resolve the conflict.
+  default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
+
+logs_bucket: 'gs://63621516867-us-central1-cloudbuild-logs'
+
 steps:
 # Step 1: Get credentials for the GKE cluster.
 # This command is still necessary and correctly fetches the auth data.
@@ -22,8 +29,7 @@ steps:
   args: ['pipeline.py']
 
 # Step 4: Apply the compiled pipeline to Kubeflow.
-# This is the step that is failing. It needs to be configured with the proper
-# credentials and environment variables to connect to the cluster.
+# This step is configured with the proper credentials and environment variables.
 - name: 'gcr.io/cloud-builders/kubectl'
   args:
   - 'apply'

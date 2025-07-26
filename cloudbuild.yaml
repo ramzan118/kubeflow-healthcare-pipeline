@@ -23,7 +23,7 @@ steps:
   args: ['pipeline.py']
 
 # NEW Step 4: Upload the compiled pipeline to the Kubeflow Pipelines UI.
-# This uses the `kfp` client to register the pipeline.
+# The KUBECONFIG environment variable is passed to allow authentication.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'kfp'
   args:
@@ -33,6 +33,8 @@ steps:
   - 'healthcare_ml_pipeline.yaml'
   - '--pipeline-name'
   - 'healthcare-data-ml-pipeline'
+  env:
+  - 'KUBECONFIG=/builder/home/.kube/config' # <-- Add this line to pass credentials
 
 images:
 - 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'

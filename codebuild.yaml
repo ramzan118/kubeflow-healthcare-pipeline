@@ -1,0 +1,32 @@
+steps:
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    gcloud config set project $_PROJECT_ID
+    gcloud container clusters get-credentials $_CLUSTER_NAME --zone $_ZONE --project $_PROJECT_ID
+
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest', '.']
+
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest']
+
+- name: 'python'
+  entrypoint: 'python3'
+  args: ['pipeline.py']
+
+- name: 'gcr.io/cloud-builders/kubectl'
+  args:
+  - 'apply'
+  - '-f'
+  - 'healthcare_ml_pipeline.yaml' # This will upload the compiled pipeline to Kubeflow
+  env:
+  - 'KUBECONFIG=/builder/home/.kube/config' # Ensure kubectl uses the correct config
+
+# Parameters for Cloud Build (can be set in triggers)
+substitutions:
+  _PROJECT_ID: your-kubeflow-healthcare-project # Replace with your project ID
+  _CLUSTER_NAME: kubeflow-healthcare-cluster
+  _ZONE: us-central1-a # Replace with your zone

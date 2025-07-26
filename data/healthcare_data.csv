@@ -1,0 +1,6 @@
+patient_id,age,gender,diagnosis,treatment_cost
+1,35,Male,Flu,150.00
+2,48,Female,Diabetes,1200.50
+3,22,Male,Cold,75.25
+4,67,Female,Heart Disease,5000.00
+5,40,Male,Broken Bone,800.00

@@ -2,13 +2,14 @@
 # It builds a Docker image, runs a Python script to compile a pipeline,
 # and then applies it to a Kubeflow cluster.
 
-# This option resolves the "build.service_account" logs error for 2nd gen triggers
+# This option resolves the "if 'build.service_account' is specified..." error
+# for 2nd gen triggers.
 options:
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
 
 steps:
 # Step 1: Get credentials for the GKE cluster
-# This step is crucial for subsequent kubectl commands.
+# This is crucial for subsequent kubectl commands.
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'bash'
   args:
@@ -44,8 +45,8 @@ images:
 - 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
 
 # This section defines the substitution variables.
-# You must set these in your Cloud Build trigger.
+# The values are now set to your specific project and cluster details.
 substitutions:
-  _PROJECT_ID: your-kubeflow-healthcare-project # REPLACE WITH YOUR PROJECT ID
+  _PROJECT_ID: advance-replica-466713-n7
   _CLUSTER_NAME: kubeflow-healthcare-cluster
-  _ZONE: us-central1-a # REPLACE WITH YOUR ZONE
+  _ZONE: us-central1-a

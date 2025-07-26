@@ -1,2 +1,2 @@
 # requirements.txt
-kfp
+kfp==1.8.2

@@ -1,26 +1,24 @@
 # A Cloud Build configuration file for building and deploying a Kubeflow pipeline.
 
-# This section configures the logs bucket. It is required when using a
+# This section configures the logs bucket, which is required when using a
 # custom service account for the build.
 options:
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
 logs_bucket: 'gs://63621516867-us-central1-cloudbuild-logs'
 
 # The steps below perform the following tasks:
-# 1. Fetches GKE cluster credentials and installs the required authentication plugin.
+# 1. Fetches GKE cluster credentials and creates the Kubeconfig file.
 # 2. Builds a Docker image containing the Kubeflow pipeline components.
-# 3. Compiles the Kubeflow pipeline Python script into a YAML file.
-# 4. Uploads the compiled pipeline YAML to the Kubeflow Pipelines UI.
+# 3. Compiles the Kubeflow pipeline Python script into a YAML file using the custom image.
+# 4. Uploads the compiled pipeline YAML to the Kubeflow Pipelines UI using the new kubectl builder.
 steps:
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
-    # Install the gke-gcloud-auth-plugin to enable authentication for the Kubeflow SDK.
-    gcloud components install gke-gcloud-auth-plugin --quiet
-
     # Get the credentials for the GKE cluster and store them in the Kubeconfig file.
+    # Cloud Build automatically installs the necessary auth plugin in this step.
     gcloud container clusters get-credentials "${_CLUSTER_NAME}" \
       --zone "${_ZONE}" \
       --project "${_PROJECT_ID}"
@@ -34,15 +32,12 @@ steps:
   env:
   - 'KUBECONFIG=/builder/home/.kube/config'
 
-- name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
-  entrypoint: 'kfp'
+- name: 'gcr.io/cloud-builders/kubectl'
   args:
-  - 'pipeline'
-  - 'upload'
-  - '--pipeline-package'
+  - '--kubeconfig=/builder/home/.kube/config'
+  - 'apply'
+  - '-f'
   - 'healthcare_ml_pipeline.yaml'
-  - '--pipeline-name'
-  - 'healthcare-data-ml-pipeline'
   env:
   - 'KUBECONFIG=/builder/home/.kube/config'
 

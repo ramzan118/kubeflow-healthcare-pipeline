@@ -2,6 +2,7 @@
 #kfp==1.8.2
 requests<3
 urllib3<2
-kfp==2.0.0b13
 pandas==2.0.3
-google-cloud-aiplatform
+kfp==2.0.0b13
+google-cloud-aiplatform==1.38.0
+opencensus-ext-stackdriver==0.8.0

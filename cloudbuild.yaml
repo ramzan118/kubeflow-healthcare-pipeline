@@ -1,58 +1,34 @@
-# A Cloud Build configuration file for building and deploying a Kubeflow pipeline.
-
-options:
-  default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
-logs_bucket: 'gs://63621516867-us-central1-cloudbuild-logs'
-
 steps:
-# Step 1: Build the custom Docker image.
-# This single image will contain all necessary tools: gcloud, kubectl,
-# gke-gcloud-auth-plugin, and the kfp SDK.
+# Step 1: Build Docker image
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest', '.']
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/kubeflow-pipeline-components:latest', '.']
 
-# Step 2: Get GKE cluster credentials.
-# We explicitly set the PATH so the 'gcloud' executable is found.
-- name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
-  entrypoint: 'gcloud'
-  args:
-  - 'container'
-  - 'clusters'
-  - 'get-credentials'
-  - "${_CLUSTER_NAME}"
-  - '--zone=${_ZONE}'
-  - '--project=${_PROJECT_ID}'
-  env:
-  - 'PATH=/usr/local/gcloud/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-  
-# Step 3: Compile the Kubeflow pipeline.
-# We explicitly set the PATH for python to run kfp commands.
-- name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
+# Step 2: Get GKE credentials using full gcloud path
+- name: 'gcr.io/$PROJECT_ID/kubeflow-pipeline-components:latest'
+  entrypoint: '/usr/local/gcloud/bin/gcloud'
+  args: [
+    'container', 'clusters', 'get-credentials',
+    '$_CLUSTER_NAME', '--zone=$_ZONE', '--project=$PROJECT_ID'
+  ]
+
+# Step 3: Compile pipeline
+- name: 'gcr.io/$PROJECT_ID/kubeflow-pipeline-components:latest'
   entrypoint: 'python3'
   args: ['pipeline.py']
-  env:
-  - 'KUBECONFIG=/builder/home/.kube/config'
-  - 'PATH=/usr/local/gcloud/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  env: ['KUBECONFIG=/builder/home/.kube/config']
 
-# Step 4: Upload the compiled pipeline.
-# We explicitly set the PATH for the kfp executable.
-- name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
+# Step 4: Upload pipeline
+- name: 'gcr.io/$PROJECT_ID/kubeflow-pipeline-components:latest'
   entrypoint: 'kfp'
-  args:
-  - 'pipeline'
-  - 'upload'
-  - '--pipeline-package'
-  - 'healthcare_ml_pipeline.yaml'
-  - '--pipeline-name'
-  - 'healthcare-data-ml-pipeline'
-  env:
-  - 'KUBECONFIG=/builder/home/.kube/config'
-  - 'PATH=/usr/local/gcloud/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  args: [
+    'pipeline', 'upload',
+    '--pipeline-package', 'healthcare_ml_pipeline.yaml',
+    '--pipeline-name', 'healthcare-data-ml-pipeline'
+  ]
+  env: ['KUBECONFIG=/builder/home/.kube/config']
 
-images:
-- 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
+images: ['gcr.io/$PROJECT_ID/kubeflow-pipeline-components:latest']
 
 substitutions:
-  _PROJECT_ID: advance-replica-466713-n7
   _CLUSTER_NAME: kubeflow-healthcare-cluster
   _ZONE: us-central1-a

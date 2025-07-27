@@ -1,4 +1,7 @@
 # requirements.txt
-kfp==1.8.2
+#kfp==1.8.2
 requests<3
 urllib3<2
+kfp==2.0.0b13
+pandas==2.0.3
+google-cloud-aiplatform

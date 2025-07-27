@@ -1,17 +1,29 @@
-# Use a lightweight official Python image as the base
+# Use a Python base image
 FROM python:3.9-slim
 
-# Set the working directory in the container
+# Install system dependencies for gcloud and kubectl
+RUN apt-get update && apt-get install -y \
+    curl \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Cloud CLI and gke-gcloud-auth-plugin
+RUN curl -sSL https://sdk.cloud.google.com | bash -s -- --install-dir=/usr/local/gcloud --disable-prompts
+
+# Install kubectl
+RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
+    && chmod +x ./kubectl \
+    && mv ./kubectl /usr/local/bin/kubectl
+
+# Add gcloud and kubectl to the PATH
+ENV PATH="/usr/local/gcloud/bin:${PATH}"
+
+# Set the working directory
 WORKDIR /app
 
-# Copy the requirements file into the container first to optimize caching
+# Copy requirements file and install Python dependencies
 COPY requirements.txt .
-
-# Install the Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the pipeline code into the container
-COPY . /app
-
-# If your pipeline needs to be executed by a specific command, define it here.
-# The Cloud Build step will override this with 'python pipeline.py'
+# Copy all project files
+COPY . .

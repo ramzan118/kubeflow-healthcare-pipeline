@@ -1,7 +1,5 @@
 # A Cloud Build configuration file for building and deploying a Kubeflow pipeline.
 
-# This section configures the logs bucket. It is required when using a
-# custom service account for the build.
 options:
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
 logs_bucket: 'gs://63621516867-us-central1-cloudbuild-logs'
@@ -14,8 +12,8 @@ steps:
   args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest', '.']
 
 # Step 2: Get GKE cluster credentials.
-# The `gcloud` command is run from the newly built image, which
-# has the gke-gcloud-auth-plugin installed.
+# The `gcloud` command is run from the newly built image.
+# We explicitly set the PATH so the 'gcloud' executable is found.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'gcloud'
   args:
@@ -25,13 +23,16 @@ steps:
   - "${_CLUSTER_NAME}"
   - '--zone=${_ZONE}'
   - '--project=${_PROJECT_ID}'
-
+  env:
+  - 'PATH=/usr/local/gcloud/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  
 # Step 3: Compile the Kubeflow pipeline.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'python3'
   args: ['pipeline.py']
   env:
   - 'KUBECONFIG=/builder/home/.kube/config'
+  - 'PATH=/usr/local/gcloud/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
 # Step 4: Upload the compiled pipeline.
 # The `kfp` command is also run from the custom image, ensuring it has
@@ -47,12 +48,11 @@ steps:
   - 'healthcare-data-ml-pipeline'
   env:
   - 'KUBECONFIG=/builder/home/.kube/config'
+  - 'PATH=/usr/local/gcloud/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
-# This section lists the Docker images to be pushed to Google Container Registry.
 images:
 - 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
 
-# This section defines the substitution variables used in the steps.
 substitutions:
   _PROJECT_ID: advance-replica-466713-n7
   _CLUSTER_NAME: kubeflow-healthcare-cluster

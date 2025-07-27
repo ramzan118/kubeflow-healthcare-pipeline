@@ -1,29 +1,29 @@
-# Use a Python base image
 FROM python:3.9-slim
 
-# Install system dependencies for gcloud and kubectl
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    git \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Google Cloud CLI and gke-gcloud-auth-plugin
-RUN curl -sSL https://sdk.cloud.google.com | bash -s -- --install-dir=/usr/local/gcloud --disable-prompts
+# Install Google Cloud CLI
+RUN curl -sSL https://sdk.cloud.google.com > /tmp/gcloud_install.sh \
+    && bash /tmp/gcloud_install.sh --install-dir=/usr/local/gcloud --disable-prompts \
+    && rm /tmp/gcloud_install.sh
 
-# Install kubectl
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
-    && chmod +x ./kubectl \
-    && mv ./kubectl /usr/local/bin/kubectl
+# Install kubectl and gke-gcloud-auth-plugin
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
+    && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl \
+    && rm kubectl
 
-# Add gcloud and kubectl to the PATH
-ENV PATH="/usr/local/gcloud/bin:${PATH}"
+# Add gcloud to PATH
+ENV PATH $PATH:/usr/local/gcloud/bin
 
-# Set the working directory
+# Install Python dependencies
 WORKDIR /app
-
-# Copy requirements file and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all project files
+# Copy application code
 COPY . .

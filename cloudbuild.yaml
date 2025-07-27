@@ -12,7 +12,6 @@ steps:
   args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest', '.']
 
 # Step 2: Get GKE cluster credentials.
-# The `gcloud` command is run from the newly built image.
 # We explicitly set the PATH so the 'gcloud' executable is found.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'gcloud'
@@ -27,6 +26,7 @@ steps:
   - 'PATH=/usr/local/gcloud/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
   
 # Step 3: Compile the Kubeflow pipeline.
+# We explicitly set the PATH for python to run kfp commands.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'python3'
   args: ['pipeline.py']
@@ -35,8 +35,7 @@ steps:
   - 'PATH=/usr/local/gcloud/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
 # Step 4: Upload the compiled pipeline.
-# The `kfp` command is also run from the custom image, ensuring it has
-# access to the necessary authentication plugins and the kubeconfig file.
+# We explicitly set the PATH for the kfp executable.
 - name: 'gcr.io/${_PROJECT_ID}/kubeflow-pipeline-components:latest'
   entrypoint: 'kfp'
   args:
